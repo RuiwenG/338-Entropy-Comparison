@@ -46,80 +46,83 @@ class GolombCode:
 
 class CABACEngine:
     """
-    A simplified implementation of a Context-Adaptive Binary Arithmetic Coding (CABAC) engine.
+    A more robust implementation of the CABAC engine that handles underflow.
     """
 
     def __init__(self):
         self.low = 0
-        self.high = (1 << 16) - 1  # Use 16-bit precision for the interval
-        self.bitstream = ""
-        self.contexts = {}  # {context_id: {"p_lps": prob, "mps": 0 or 1}}
+        self.high = (1 << 16) - 1  # Use 16-bit precision
+        self.pending_bits = 0
+        self.bitstream_len = 0
+        self.contexts = {}
 
+    # ... _get_context and _update_context methods remain the same ...
     def _get_context(self, context_id):
-        """Initializes a context if it doesn't exist."""
         if context_id not in self.contexts:
-            # Initialize with equal probability and Most Probable Symbol (MPS) as 0
             self.contexts[context_id] = {"p_lps": 0.5, "mps": 0}
         return self.contexts[context_id]
 
     def _update_context(self, context_id, bit):
-        """Updates the probability model for a given context."""
         context = self._get_context(context_id)
-        p_lps = context["p_lps"]
-        mps = context["mps"]
-
-        if bit == mps:
-            # The MPS occurred, decrease the probability of the LPS
+        if bit == context["mps"]:
             context["p_lps"] *= 0.95
         else:
-            # The LPS occurred, increase its probability
             context["p_lps"] *= 1.5
-            # If the LPS is now more probable, switch the MPS
             if context["p_lps"] > 0.5:
-                context["mps"] = 1 - mps
+                context["mps"] = 1 - context["mps"]
                 context["p_lps"] = 1.0 - context["p_lps"]
 
     def encode_bin(self, bit, context_id):
-        """Encodes a single binary value (bin)."""
+        """Encodes a single binary value (bin) with underflow protection."""
         context = self._get_context(context_id)
         p_lps = context["p_lps"]
         mps = context["mps"]
 
         range_width = self.high - self.low + 1
-        lps_range = int(range_width * p_lps)
-
-        if lps_range == 0:
-            lps_range = 1
+        lps_range = max(1, int(range_width * p_lps))
 
         if bit == mps:
             self.high = self.low + (range_width - lps_range) - 1
         else:
             self.low = self.low + (range_width - lps_range)
-            self.high = self.low + lps_range - 1
 
-        # Renormalization
         while True:
+            # Condition 1: Range is in the lower half. Output 0 and any pending 1s.
             if self.high < (1 << 15):
-                self.bitstream += "0"
+                self.bitstream_len += 1 + self.pending_bits
+                self.pending_bits = 0
                 self.low <<= 1
                 self.high = (self.high << 1) | 1
+            # Condition 2: Range is in the upper half. Output 1 and any pending 0s.
             elif self.low >= (1 << 15):
-                self.bitstream += "1"
+                self.bitstream_len += 1 + self.pending_bits
+                self.pending_bits = 0
                 self.low = (self.low - (1 << 15)) << 1
                 self.high = ((self.high - (1 << 15)) << 1) | 1
+            # Condition 3: UNDERFLOW DETECTED. Range is stuck in the middle.
+            # (low is in 2nd quarter, high is in 3rd quarter)
+            elif self.low >= (1 << 14) and self.high < 3 * (1 << 14):
+                self.pending_bits += 1
+                self.low = (self.low - (1 << 14)) << 1
+                self.high = ((self.high - (1 << 14)) << 1) | 1
+            # Condition 4: No more scaling possible. Break the loop.
             else:
                 break
 
         self._update_context(context_id, bit)
 
     def finish_encoding(self):
-        """Finalizes the bitstream."""
-        # Output the remaining interval
-        if self.low < (1 << 14):
-            self.bitstream += "01"
-        else:
-            self.bitstream += "10"
-        return self.bitstream
+        """Finalizes the bitstream, flushing any pending bits."""
+        # We need to output one final bit to disambiguate the range.
+        # We follow it with any pending bits.
+        self.pending_bits += 1
+        if self.low < (1 << 14):  # If low is in the first quarter
+            self.bitstream_len += self.pending_bits
+        else:  # low is in the second quarter
+            self.bitstream_len += self.pending_bits + 1
+
+        # Return total bits + 2 for the final flush (simplified from original)
+        return self.bitstream_len
 
 
 class EntropyEncoder:
@@ -184,9 +187,7 @@ def get_image_residuals(image_path):
 
 
 if __name__ == "__main__":
-    # --- IMPORTANT ---
-    # Replace this with the path to your own image file (e.g., a .png or .jpg)
-    IMAGE_PATH = "test_image.png"
+    IMAGE_PATH = "assets/coconut.jpeg"
 
     # --- Pre-computation ---
     print(f"Loading image and calculating residuals from '{IMAGE_PATH}'...")
