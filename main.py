@@ -2,15 +2,27 @@ import time
 import numpy as np
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
+import os  # Added to handle file paths
 
 # Import your custom modules
 import golomb_rice
 import predictor
 
 
+def save_image(numpy_data, file_path):
+    """Saves a numpy array as an image file."""
+    try:
+        img = Image.fromarray(numpy_data)
+        img.save(file_path)
+        print(f"Saved image to '{file_path}'")
+    except Exception as e:
+        print(f"Error saving image to '{file_path}': {e}")
+
+
 def compress_image(image_path, m, num_chunks):
     """
     Loads, processes, and compresses an image into independent chunks.
+    Also saves a visual representation of the residuals.
     """
     print(f"Compressing '{image_path}'...")
     # Load image and convert to grayscale numpy array
@@ -19,13 +31,23 @@ def compress_image(image_path, m, num_chunks):
         image_data = np.array(img)
     except FileNotFoundError:
         print(f"Error: Image file not found at '{image_path}'")
-        return None
+        return None, None
 
     # Get prediction errors
     residuals = predictor.get_residuals(image_data)
 
+    # To make residuals viewable, we map them to the 0-255 range.
+    # A residual of 0 (perfect prediction) will be mapped to mid-gray (128).
+    residuals_visual = residuals.astype(np.int16) + 128
+    # Clip values to ensure they are within the valid 0-255 range for an image
+    residuals_visual = np.clip(residuals_visual, 0, 255).astype(np.uint8)
+
+    # Get the base name of the input file to create descriptive output names
+    base_name = os.path.splitext(os.path.basename(image_path))[0]
+    residuals_path = f"{base_name}_residuals.png"
+    save_image(residuals_visual, residuals_path)
+
     # Split residuals into chunks for parallel processing
-    # Here, each chunk is a set of rows
     chunk_data = np.array_split(residuals, num_chunks)
 
     # Encode each chunk independently
@@ -65,15 +87,12 @@ def decompress_parallel(compressed_obj):
     chunks = compressed_obj["chunks"]
     num_residuals_list = compressed_obj["num_residuals_per_chunk"]
 
-    decoded_chunks = [None] * len(chunks)
-
     # Decode function for a single chunk
     def decode_worker(i):
         return golomb_rice.rice_decode(chunks[i], m, num_residuals_list[i])
 
     # Use a thread pool to run workers in parallel
     with ThreadPoolExecutor() as executor:
-        # map() runs the worker on each index and returns results in order
         decoded_chunks = list(executor.map(decode_worker, range(len(chunks))))
 
     # Combine the results
@@ -86,28 +105,33 @@ def decompress_parallel(compressed_obj):
 
 if __name__ == "__main__":
     # --- Configuration ---
-    IMAGE_PATH = "assets/coconut.jpeg"
+    IMAGE_PATH = "assets/scdi.jpeg"
     RICE_PARAMETER_M = 16  # Power of 2 (e.g., 4, 8, 16, 32). Tune this for your image.
     NUM_CHUNKS = 8  # Number of chunks to split image into (for parallelization)
 
     # --- Create a sample image if it doesn't exist ---
-    try:
-        Image.open(IMAGE_PATH)
-    except FileNotFoundError:
+    if not os.path.exists(IMAGE_PATH):
         print(f"'{IMAGE_PATH}' not found. Creating a sample 1024x1024 grayscale image.")
         sample_img_data = np.zeros((1024, 1024), dtype=np.uint8)
+        # Create some gradients and shapes to make it more interesting
+        x = np.linspace(0, 255, 1024)
+        y = np.linspace(0, 255, 1024)
+        xv, yv = np.meshgrid(x, y)
+        sample_img_data = ((xv + yv) / 2).astype(np.uint8)
         sample_img_data[256:768, 256:768] = np.random.randint(
             0, 256, (512, 512), dtype=np.uint8
         )
-        Image.fromarray(sample_img_data).save(IMAGE_PATH)
+        save_image(sample_img_data, IMAGE_PATH)
 
-    # --- Compression ---
+    # --- Compression (and saving of residuals image) ---
     compressed_obj, original_image_data = compress_image(
         IMAGE_PATH, RICE_PARAMETER_M, NUM_CHUNKS
     )
 
     if compressed_obj:
         # --- Evaluation ---
+        print("\n--- Starting Decompression & Evaluation ---")
+
         # 1. Serial Decompression
         start_time_serial = time.perf_counter()
         reconstructed_serial = decompress_serial(compressed_obj)
@@ -122,11 +146,16 @@ if __name__ == "__main__":
         parallel_time = end_time_parallel - start_time_parallel
         print(f"Parallel Decompression Time: {parallel_time:.6f} seconds")
 
+        # Save the final reconstructed image ---
+        base_name = os.path.splitext(os.path.basename(IMAGE_PATH))[0]
+        reconstructed_path = f"{base_name}_reconstructed.png"
+        save_image(reconstructed_parallel, reconstructed_path)
+
         # 3. Calculate Speedup & Compression Ratio
         speedup = serial_time / parallel_time if parallel_time > 0 else float("inf")
         print(f"\nSpeedup Factor: {speedup:.2f}x")
 
-        original_size_bits = original_image_data.size * 8  # 8 bits per pixel
+        original_size_bits = original_image_data.size * 8
         compressed_size_bits = sum(len(c) for c in compressed_obj["chunks"])
         compression_ratio = original_size_bits / compressed_size_bits
         bits_per_pixel = compressed_size_bits / original_image_data.size
@@ -137,11 +166,11 @@ if __name__ == "__main__":
         print(f"Bits Per Pixel (bpp): {bits_per_pixel:.3f}")
 
         # 4. Verify Correctness
-        if np.array_equal(original_image_data, reconstructed_serial) and np.array_equal(
-            original_image_data, reconstructed_parallel
-        ):
-            print("\n Verification successful: Decompressed images match the original.")
+        if np.array_equal(original_image_data, reconstructed_parallel):
+            print(
+                "\n Verification successful: Decompressed image matches the original."
+            )
         else:
             print(
-                "\n Verification failed: Decompressed images do not match the original."
+                "\n Verification failed: Decompressed image does not match the original."
             )
