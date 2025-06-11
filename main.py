@@ -2,11 +2,37 @@ import time
 import numpy as np
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
-import os  # Added to handle file paths
+import os
+import json
+import builtins
+from datetime import datetime
 
-# Import your custom modules
 import golomb_rice
 import predictor
+
+
+# --- Global list to store log messages ---
+log_entries = []
+
+# --- Custom print function to capture output ---
+# Keep a reference to the original print function
+original_print = builtins.print
+
+
+def custom_print(*args, **kwargs):
+    """
+    Custom print function that prints to the console and saves the message
+    to a global list for later JSON output.
+    """
+    # Create the message string from arguments
+    message = " ".join(map(str, args))
+    # Call the original print function to display output on the console
+    original_print(message, **kwargs)
+    # Add the message to our log list
+    log_entries.append(message)
+
+
+builtins.print = custom_print
 
 
 def save_image(numpy_data, file_path):
@@ -106,7 +132,7 @@ def decompress_parallel(compressed_obj):
 if __name__ == "__main__":
     # --- Configuration ---
     # change with custom test images
-    IMAGE_PATH = "assets/text.jpeg"
+    IMAGE_PATH = "assets/scdi.jpeg"
     RICE_PARAMETER_M = 16
     NUM_CHUNKS = 8
 
@@ -147,10 +173,10 @@ if __name__ == "__main__":
         parallel_time = end_time_parallel - start_time_parallel
         print(f"Parallel Decompression Time: {parallel_time:.6f} seconds")
 
-        # Save the final reconstructed image ---
-        base_name = os.path.splitext(os.path.basename(IMAGE_PATH))[0]
-        reconstructed_path = f"results/{base_name}_reconstructed.png"
-        save_image(reconstructed_parallel, reconstructed_path)
+        # # Save the final reconstructed image ---
+        # base_name = os.path.splitext(os.path.basename(IMAGE_PATH))[0]
+        # reconstructed_path = f"results/{base_name}_reconstructed.png"
+        # save_image(reconstructed_parallel, reconstructed_path)
 
         # 3. Calculate Speedup & Compression Ratio
         speedup = serial_time / parallel_time if parallel_time > 0 else float("inf")
@@ -168,10 +194,43 @@ if __name__ == "__main__":
 
         # 4. Verify Correctness
         if np.array_equal(original_image_data, reconstructed_parallel):
-            print(
-                "\n Verification successful: Decompressed image matches the original."
-            )
+            print("\nVerification successful: Decompressed image matches the original.")
         else:
             print(
-                "\n Verification failed: Decompressed image does not match the original."
+                "\nVerification failed: Decompressed image does not match the original."
             )
+
+        # --- Function to save logs to a JSON file ---
+        def save_logs_to_json(file_path, logs):
+            """
+            Appends the log messages from the current run to a JSON file.
+            Each run is stored as a separate object in a list.
+            """
+            try:
+                # Load existing data from the file
+                with open(file_path, "r") as f:
+                    all_runs_data = json.load(f)
+                # Ensure it's a list
+                if not isinstance(all_runs_data, list):
+                    all_runs_data = []
+            except (FileNotFoundError, json.JSONDecodeError):
+                # If file doesn't exist or is invalid, start with an empty list
+                all_runs_data = []
+
+            # Create a new entry for the current execution
+            current_run_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "output": logs,
+            }
+            all_runs_data.append(current_run_entry)
+
+            # Write the updated list back to the file
+            with open(file_path, "w") as f:
+                json.dump(all_runs_data, f, indent=4)
+
+            # Revert print back to original to not log the final message
+            builtins.print = original_print
+            print(f"\nLog messages from this run have been appended to '{file_path}'")
+
+        # --- Save all captured print messages to output.json ---
+        save_logs_to_json("output.json", log_entries)

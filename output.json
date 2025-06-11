@@ -1,0 +1,66 @@
+[
+    {
+        "timestamp": "2025-06-10T18:44:38.785892",
+        "output": [
+            "Compressing 'assets/coconut.jpeg'...",
+            "Saved image to 'results/coconut_residuals.png'",
+            "\n--- Starting Decompression & Evaluation ---",
+            "\nSerial Decompression Time: 3.769008 seconds",
+            "Parallel Decompression Time: 3.829152 seconds",
+            "\nSpeedup Factor: 0.98x",
+            "Original Size: 3648.80 KB",
+            "Compressed Size: 2380.37 KB",
+            "Compression Ratio: 1.53:1",
+            "Bits Per Pixel (bpp): 5.219",
+            "\nVerification successful: Decompressed image matches the original."
+        ]
+    },
+    {
+        "timestamp": "2025-06-10T20:10:37.743117",
+        "output": [
+            "Compressing 'assets/git_meme.jpeg'...",
+            "Saved image to 'results/git_meme_residuals.png'",
+            "\n--- Starting Decompression & Evaluation ---",
+            "\nSerial Decompression Time: 2.047327 seconds",
+            "Parallel Decompression Time: 2.109959 seconds",
+            "\nSpeedup Factor: 0.97x",
+            "Original Size: 1993.80 KB",
+            "Compressed Size: 1305.62 KB",
+            "Compression Ratio: 1.53:1",
+            "Bits Per Pixel (bpp): 5.239",
+            "\nVerification successful: Decompressed image matches the original."
+        ]
+    },
+    {
+        "timestamp": "2025-06-10T20:12:28.247689",
+        "output": [
+            "Compressing 'assets/text.jpeg'...",
+            "Saved image to 'results/text_residuals.png'",
+            "\n--- Starting Decompression & Evaluation ---",
+            "\nSerial Decompression Time: 9.499468 seconds",
+            "Parallel Decompression Time: 9.753211 seconds",
+            "\nSpeedup Factor: 0.97x",
+            "Original Size: 8930.25 KB",
+            "Compressed Size: 5775.42 KB",
+            "Compression Ratio: 1.55:1",
+            "Bits Per Pixel (bpp): 5.174",
+            "\nVerification successful: Decompressed image matches the original."
+        ]
+    },
+    {
+        "timestamp": "2025-06-10T20:14:38.111338",
+        "output": [
+            "Compressing 'assets/scdi.jpeg'...",
+            "Saved image to 'results/scdi_residuals.png'",
+            "\n--- Starting Decompression & Evaluation ---",
+            "\nSerial Decompression Time: 9.418219 seconds",
+            "Parallel Decompression Time: 9.516415 seconds",
+            "\nSpeedup Factor: 0.99x",
+            "Original Size: 8930.25 KB",
+            "Compressed Size: 5918.49 KB",
+            "Compression Ratio: 1.51:1",
+            "Bits Per Pixel (bpp): 5.302",
+            "\nVerification successful: Decompressed image matches the original."
+        ]
+    }
+]
