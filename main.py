@@ -132,7 +132,7 @@ def decompress_parallel(compressed_obj):
 if __name__ == "__main__":
     # --- Configuration ---
     # change with custom test images
-    IMAGE_PATH = "assets/scdi.jpeg"
+    IMAGE_PATH = "assets/IMG_2228.jpeg"
     RICE_PARAMETER_M = 16
     NUM_CHUNKS = 8
 

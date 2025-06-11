@@ -62,5 +62,37 @@
             "Bits Per Pixel (bpp): 5.302",
             "\nVerification successful: Decompressed image matches the original."
         ]
+    },
+    {
+        "timestamp": "2025-06-10T20:38:45.957444",
+        "output": [
+            "Compressing 'assets/hk.jpeg'...",
+            "Saved image to 'results/hk_residuals.png'",
+            "\n--- Starting Decompression & Evaluation ---",
+            "\nSerial Decompression Time: 10.138991 seconds",
+            "Parallel Decompression Time: 10.168624 seconds",
+            "\nSpeedup Factor: 1.00x",
+            "Original Size: 8930.25 KB",
+            "Compressed Size: 6694.31 KB",
+            "Compression Ratio: 1.33:1",
+            "Bits Per Pixel (bpp): 5.997",
+            "\nVerification successful: Decompressed image matches the original."
+        ]
+    },
+    {
+        "timestamp": "2025-06-10T20:42:41.097341",
+        "output": [
+            "Compressing 'assets/IMG_2228.jpeg'...",
+            "Saved image to 'results/IMG_2228_residuals.png'",
+            "\n--- Starting Decompression & Evaluation ---",
+            "\nSerial Decompression Time: 9.066944 seconds",
+            "Parallel Decompression Time: 9.193972 seconds",
+            "\nSpeedup Factor: 0.99x",
+            "Original Size: 8930.25 KB",
+            "Compressed Size: 5597.84 KB",
+            "Compression Ratio: 1.60:1",
+            "Bits Per Pixel (bpp): 5.015",
+            "\nVerification successful: Decompressed image matches the original."
+        ]
     }
 ]
