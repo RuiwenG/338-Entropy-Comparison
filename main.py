@@ -44,7 +44,7 @@ def compress_image(image_path, m, num_chunks):
 
     # Get the base name of the input file to create descriptive output names
     base_name = os.path.splitext(os.path.basename(image_path))[0]
-    residuals_path = f"{base_name}_residuals.png"
+    residuals_path = f"results/{base_name}_residuals.png"
     save_image(residuals_visual, residuals_path)
 
     # Split residuals into chunks for parallel processing
@@ -105,9 +105,10 @@ def decompress_parallel(compressed_obj):
 
 if __name__ == "__main__":
     # --- Configuration ---
-    IMAGE_PATH = "assets/scdi.jpeg"
-    RICE_PARAMETER_M = 16  # Power of 2 (e.g., 4, 8, 16, 32). Tune this for your image.
-    NUM_CHUNKS = 8  # Number of chunks to split image into (for parallelization)
+    # change with custom test images
+    IMAGE_PATH = "assets/text.jpeg"
+    RICE_PARAMETER_M = 16
+    NUM_CHUNKS = 8
 
     # --- Create a sample image if it doesn't exist ---
     if not os.path.exists(IMAGE_PATH):
@@ -148,7 +149,7 @@ if __name__ == "__main__":
 
         # Save the final reconstructed image ---
         base_name = os.path.splitext(os.path.basename(IMAGE_PATH))[0]
-        reconstructed_path = f"{base_name}_reconstructed.png"
+        reconstructed_path = f"results/{base_name}_reconstructed.png"
         save_image(reconstructed_parallel, reconstructed_path)
 
         # 3. Calculate Speedup & Compression Ratio
